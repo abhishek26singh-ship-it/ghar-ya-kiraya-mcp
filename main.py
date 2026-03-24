@@ -84,13 +84,64 @@ async def demo_card(request):
     return HTMLResponse(html)
 
 
-_mcp_app = mcp.http_app(path="/mcp")
+async def demo_summary(request):
+    """Preview the summary card (Tool 2) in browser."""
+    import json
+    from core.calculator import compute_rent_vs_buy
+
+    params = dict(request.query_params)
+    result = compute_rent_vs_buy(
+        city=params.get("city", "Pune"),
+        property_price=int(params.get("property_price", 5200000)),
+        monthly_rent=int(params.get("monthly_rent", 18000)),
+        down_payment_pct=float(params.get("down_payment_pct", 20)),
+        planning_horizon_years=int(params.get("planning_horizon_years", 20)),
+    )
+    card_data = {k: result[k] for k in ["verdict", "verdict_text", "breakeven_year", "emi", "monthly_delta", "yearly_series", "horizon_summary", "inputs_used"]}
+    template_path = os.path.join(os.path.dirname(__file__), "ui", "summary_card.html")
+    with open(template_path, "r") as f:
+        html = f.read().replace("/*__DATA_PLACEHOLDER__*/{}", json.dumps(card_data, ensure_ascii=False))
+    return HTMLResponse(html)
+
+
+async def demo_detail(request):
+    """Preview detail views (Tool 3) in browser. ?view=yearly_table|monthly_snapshot|hidden_costs"""
+    import json
+    from core.calculator import compute_rent_vs_buy
+
+    params = dict(request.query_params)
+    view = params.get("view", "yearly_table")
+    result = compute_rent_vs_buy(
+        city=params.get("city", "Pune"),
+        property_price=int(params.get("property_price", 5200000)),
+        monthly_rent=int(params.get("monthly_rent", 18000)),
+        down_payment_pct=float(params.get("down_payment_pct", 20)),
+    )
+    card_data = {"view_type": view, "verdict": result["verdict"], "breakeven_year": result["breakeven_year"], "inputs_used": result["inputs_used"]}
+    if view == "yearly_table":
+        card_data["yearly_series"] = result["yearly_series"]
+    elif view == "monthly_snapshot":
+        card_data["monthly_snapshot"] = result["monthly_snapshot"]
+    elif view == "hidden_costs":
+        card_data["hidden_costs"] = result["hidden_costs"]
+    template_path = os.path.join(os.path.dirname(__file__), "ui", "detail_view.html")
+    with open(template_path, "r") as f:
+        html = f.read().replace("/*__DATA_PLACEHOLDER__*/{}", json.dumps(card_data, ensure_ascii=False))
+    return HTMLResponse(html)
+
+
+# Mount MCP with both Streamable HTTP (/mcp) and legacy SSE (/sse)
+_mcp_app = mcp.http_app(path="/mcp", transport="streamable-http")
+_sse_app = mcp.http_app(path="/sse", transport="sse")
 
 starlette_app = Starlette(
     routes=[
         Route("/", homepage),
         Route("/health", health),
         Route("/demo/card", demo_card),
+        Route("/demo/summary", demo_summary),
+        Route("/demo/detail", demo_detail),
+        Mount("/sse", app=_sse_app),
         Mount("/", app=_mcp_app),
     ],
     lifespan=_mcp_app.lifespan,
