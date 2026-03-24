@@ -21,7 +21,7 @@ def _load_template() -> str:
 
 def register(mcp):
     @mcp.tool(
-        name="get_summary_card",
+        name="get_verdict_card",
         description=(
             "Returns a lightweight visual card with verdict banner, key stats, crossover chart, "
             "and 4 action buttons. Call this AFTER get_quick_verdict to show the visual summary. "
