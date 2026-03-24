@@ -4,6 +4,8 @@ import json
 import os
 from typing import Annotated
 
+from mcp.types import TextContent, EmbeddedResource, TextResourceContents
+
 from core.calculator import compute_rent_vs_buy, format_inr
 
 _CARD_PATH = os.path.join(os.path.dirname(__file__), "..", "ui", "card.html")
@@ -78,7 +80,7 @@ def register(mcp):
         registration_fee: Annotated[int, "Registration fee in INR"] = 30000,
         monthly_maintenance: Annotated[int, "Monthly maintenance cost in INR"] = 3000,
         property_tax_per_year: Annotated[int, "Annual property tax in INR"] = 8000,
-    ) -> str:
+    ) -> list:
         result = compute_rent_vs_buy(
             city=city,
             property_price=property_price,
@@ -99,10 +101,20 @@ def register(mcp):
         voice_summary = _build_voice_summary(result)
         html_card = _build_html_card(result)
 
-        # Return structured result with UI card
-        output = {
-            **result,
-            "_voice_summary": voice_summary,
-            "_ui_html": html_card,
-        }
-        return json.dumps(output, ensure_ascii=False)
+        # Return proper MCP content blocks:
+        # 1. Text block — voice/chat summary (what the LLM reads aloud)
+        # 2. EmbeddedResource with text/html — the MCP-UI card (rendered in webview)
+        return [
+            TextContent(
+                type="text",
+                text=voice_summary,
+            ),
+            EmbeddedResource(
+                type="resource",
+                resource=TextResourceContents(
+                    uri="ui://ghar-ya-kiraya/card",
+                    mimeType="text/html",
+                    text=html_card,
+                ),
+            ),
+        ]
