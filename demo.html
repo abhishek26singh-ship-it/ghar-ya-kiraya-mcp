@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghar Ya Kiraya — Demo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Outfit', sans-serif; background: #f5f5f5; color: #141414; }
+.header {
+  background: #3535f3;
+  color: #fff;
+  padding: 24px;
+  text-align: center;
+}
+.header h1 { font-size: 28px; font-weight: 800; }
+.header p { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+.container { max-width: 480px; margin: 0 auto; padding: 20px; }
+.form-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+}
+.form-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 4px; }
+.field input, .field select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: #3535f3; }
+.btn {
+  width: 100%;
+  padding: 14px;
+  background: #3535f3;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.btn:hover { background: #2828d0; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.voice-summary {
+  text-align: center;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #141414;
+  line-height: 1.5;
+  display: none;
+}
+.mcp-info {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-left: 3px solid #1eccb0;
+}
+.mcp-info code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Ghar Ya Kiraya</h1>
+  <p>Rent vs Buy Calculator — MCP Demo</p>
+</div>
+
+<div class="container">
+  <div class="mcp-info">
+    <p style="font-size:13px;color:#666;">
+      MCP Server running at <code>http://localhost:8080/mcp</code><br>
+      This demo calls the MCP tool directly and renders the UI card below.
+    </p>
+  </div>
+
+  <div class="form-card">
+    <h2>Enter Details</h2>
+    <div class="field">
+      <label>City</label>
+      <select id="city">
+        <option value="Mumbai">Mumbai</option>
+        <option value="Pune" selected>Pune</option>
+        <option value="Bengaluru">Bengaluru</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Hyderabad">Hyderabad</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Kolkata">Kolkata</option>
+        <option value="Ahmedabad">Ahmedabad</option>
+        <option value="Jaipur">Jaipur</option>
+        <option value="Lucknow">Lucknow</option>
+        <option value="Kochi">Kochi</option>
+        <option value="Kanpur">Kanpur</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Property Price (₹)</label>
+      <input type="number" id="price" value="5200000" placeholder="e.g. 5200000">
+    </div>
+    <div class="field">
+      <label>Current Monthly Rent (₹)</label>
+      <input type="number" id="rent" value="18000" placeholder="e.g. 18000">
+    </div>
+    <div class="field">
+      <label>Down Payment (%)</label>
+      <input type="number" id="dp" value="20" min="5" max="80" step="5">
+    </div>
+    <button class="btn" id="calcBtn" onclick="calculate()">Calculate — Rent vs Buy</button>
+  </div>
+
+  <div class="voice-summary" id="voiceSummary"></div>
+  <div id="cardContainer"></div>
+</div>
+
+<script>
+async function calculate() {
+  const btn = document.getElementById('calcBtn');
+  const voice = document.getElementById('voiceSummary');
+  const container = document.getElementById('cardContainer');
+
+  btn.disabled = true;
+  btn.textContent = 'Calculating...';
+  voice.style.display = 'block';
+  voice.textContent = 'Crunching numbers...';
+  voice.style.color = '#666';
+  voice.style.fontWeight = '400';
+  container.innerHTML = '';
+
+  try {
+    const city = document.getElementById('city').value;
+    const price = document.getElementById('price').value;
+    const rent = document.getElementById('rent').value;
+    const dp = document.getElementById('dp').value;
+
+    const params = new URLSearchParams({
+      city, property_price: price, monthly_rent: rent, down_payment_pct: dp
+    });
+
+    // Fetch the rendered card HTML from server
+    const base = window.location.origin || 'http://localhost:8080';
+    const resp = await fetch(base + '/demo/card?' + params.toString());
+    if (!resp.ok) throw new Error('Server error: ' + resp.status);
+    const html = await resp.text();
+
+    // Extract voice summary from returned HTML (it's in window.DATA after render)
+    // For now, compute a simple summary
+    voice.style.display = 'block';
+    voice.style.color = '#141414';
+    voice.style.fontWeight = '600';
+
+    // Render the card in a sandboxed iframe that allows scripts
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'width:100%;border:none;border-radius:16px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.06);';
+    container.appendChild(iframe);
+
+    // Write the full HTML into the iframe
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    // Auto-resize iframe after charts render
+    const resizeIframe = () => {
+      try {
+        const h = doc.body.scrollHeight;
+        if (h > 100) iframe.style.height = (h + 40) + 'px';
+      } catch(e) {}
+    };
+
+    // Try to extract voice summary
+    const tryExtract = () => {
+      try {
+        const data = iframe.contentWindow.DATA;
+        if (data && data._voice_summary) {
+          voice.textContent = data._voice_summary;
+        } else if (data && data.verdict_text) {
+          voice.textContent = data.verdict_text;
+        } else {
+          voice.textContent = 'Results loaded! Scroll down for full analysis.';
+        }
+      } catch(e) {
+        voice.textContent = 'Results loaded below.';
+      }
+    };
+
+    // Wait for Chart.js to load and render in iframe
+    iframe.onload = () => {
+      setTimeout(() => { resizeIframe(); tryExtract(); }, 500);
+      setTimeout(resizeIframe, 1500);
+      setTimeout(resizeIframe, 3000);
+    };
+
+    // Also try periodically
+    let attempts = 0;
+    const poll = setInterval(() => {
+      resizeIframe();
+      attempts++;
+      if (attempts > 10) clearInterval(poll);
+    }, 500);
+
+  } catch(err) {
+    voice.textContent = 'Error: ' + err.message;
+    voice.style.color = '#fa2f40';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Calculate — Rent vs Buy';
+}
+</script>
+</body>
+</html>

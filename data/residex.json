@@ -1,0 +1,69 @@
+{
+  "source": "NHB RESIDEX HPI @ Assessment Prices, Q4 FY2024-25",
+  "national_avg_appreciation": 7.5,
+  "cities": {
+    "Mumbai": {
+      "appreciation": { "FY21": 2.1, "FY22": 4.8, "FY23": 5.2, "FY24": 8.2, "FY25": 5.9 },
+      "avg_rent_2bhk": 35000
+    },
+    "Pune": {
+      "appreciation": { "FY21": 2.1, "FY22": 5.4, "FY23": 6.2, "FY24": 8.9, "FY25": 6.8 },
+      "avg_rent_2bhk": 18000
+    },
+    "Bengaluru": {
+      "appreciation": { "FY21": 4.1, "FY22": 7.2, "FY23": 9.8, "FY24": 12.1, "FY25": 13.1 },
+      "avg_rent_2bhk": 28000
+    },
+    "Delhi": {
+      "appreciation": { "FY21": 1.8, "FY22": 3.2, "FY23": 4.1, "FY24": 8.4, "FY25": 2.9 },
+      "avg_rent_2bhk": 22000
+    },
+    "Hyderabad": {
+      "appreciation": { "FY21": 3.2, "FY22": 5.8, "FY23": 6.1, "FY24": 9.2, "FY25": 4.8 },
+      "avg_rent_2bhk": 20000
+    },
+    "Chennai": {
+      "appreciation": { "FY21": 2.8, "FY22": 5.1, "FY23": 6.8, "FY24": 8.9, "FY25": 9.0 },
+      "avg_rent_2bhk": 18000
+    },
+    "Kolkata": {
+      "appreciation": { "FY21": 2.2, "FY22": 4.9, "FY23": 5.8, "FY24": 7.2, "FY25": 9.6 },
+      "avg_rent_2bhk": 14000
+    },
+    "Ahmedabad": {
+      "appreciation": { "FY21": 1.9, "FY22": 3.8, "FY23": 4.2, "FY24": 6.8, "FY25": 6.1 },
+      "avg_rent_2bhk": 12000
+    },
+    "Jaipur": {
+      "appreciation": { "FY21": 2.1, "FY22": 4.2, "FY23": 5.1, "FY24": 7.2, "FY25": 5.8 },
+      "avg_rent_2bhk": 11000
+    },
+    "Lucknow": {
+      "appreciation": { "FY21": 1.8, "FY22": 3.2, "FY23": 4.1, "FY24": 6.8, "FY25": 5.2 },
+      "avg_rent_2bhk": 10000
+    },
+    "Kochi": {
+      "appreciation": { "FY21": 2.2, "FY22": 3.8, "FY23": 4.8, "FY24": 6.9, "FY25": 5.8 },
+      "avg_rent_2bhk": 12000
+    },
+    "Kanpur": {
+      "appreciation": { "FY21": 1.5, "FY22": 2.8, "FY23": 3.9, "FY24": 5.8, "FY25": 4.8 },
+      "avg_rent_2bhk": 8000
+    }
+  },
+  "aliases": {
+    "Poona": "Pune",
+    "Poonay": "Pune",
+    "Bangalore": "Bengaluru",
+    "Blr": "Bengaluru",
+    "Delhi NCR": "Delhi",
+    "New Delhi": "Delhi",
+    "Noida": "Delhi",
+    "Gurgaon": "Delhi",
+    "Gurugram": "Delhi",
+    "Hyd": "Hyderabad",
+    "Bombay": "Mumbai",
+    "Madras": "Chennai",
+    "Calcutta": "Kolkata"
+  }
+}
