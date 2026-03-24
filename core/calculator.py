@@ -1,6 +1,17 @@
 """Financial engine for Rent vs Buy comparison."""
 
 from core.city_lookup import get_avg_appreciation, get_city_info
+from core.rent_lookup import get_avg_rent
+
+# Shared default constants
+DEFAULT_INTEREST_RATE = 8.5
+DEFAULT_TENURE_YEARS = 20
+DEFAULT_RENT_ESCALATION = 8.0
+DEFAULT_STAMP_DUTY_PCT = 6.0
+DEFAULT_MAINTENANCE_MONTHLY = 3000
+DEFAULT_PROPERTY_TAX_YEARLY = 8000
+DEFAULT_REGISTRATION_FEE = 30000
+DEFAULT_INV_RETURN = 8.0
 
 
 def format_inr(amount: float) -> str:
@@ -252,4 +263,104 @@ def compute_rent_vs_buy(
             "stamp_duty": f"{stamp_duty_pct}%",
         },
         "low_dp_warning": low_dp_warning,
+    }
+
+
+def compute_quick_verdict(
+    city: str,
+    property_price: int,
+    monthly_rent: int = 0,
+    down_payment_pct: float = 20.0,
+) -> dict:
+    """Fast verdict — just EMI + break-even scan. No yearly series, no HTML. <5ms."""
+
+    # Auto-fetch rent if not provided
+    rent_source = "user_provided"
+    rent_value = monthly_rent
+    if rent_value <= 0:
+        rent_data = get_avg_rent(city)
+        if rent_data and "avg_monthly_rent" in rent_data:
+            rent_value = rent_data["avg_monthly_rent"]
+            rent_source = "city_average"
+        else:
+            return {"error": "Could not determine rent", "tip": "Please provide monthly_rent or use a supported city"}
+
+    # Resolve appreciation
+    appr_pct = get_avg_appreciation(city) if city else 7.5
+    if appr_pct <= 0:
+        appr_pct = 7.5
+
+    # Cap down payment
+    dp_pct = max(0.0, min(100.0, down_payment_pct))
+    down_payment = property_price * dp_pct / 100
+    loan_amount = property_price - down_payment
+
+    # EMI
+    emi = compute_emi(loan_amount, DEFAULT_INTEREST_RATE, DEFAULT_TENURE_YEARS)
+
+    # Quick break-even scan
+    stamp_duty = property_price * DEFAULT_STAMP_DUTY_PCT / 100
+    cum_buy = stamp_duty + DEFAULT_REGISTRATION_FEE + down_payment
+    cum_rent = 0.0
+    appr_rate = appr_pct / 100
+    rent_esc = DEFAULT_RENT_ESCALATION / 100
+    breakeven_year = None
+
+    for year in range(1, 26):
+        # Buy: annual outflow
+        buy_annual = (emi * 12 if year <= DEFAULT_TENURE_YEARS else 0) + DEFAULT_MAINTENANCE_MONTHLY * 12 + DEFAULT_PROPERTY_TAX_YEARLY
+        cum_buy += buy_annual
+        net_buy = cum_buy - (property_price * (1 + appr_rate) ** year - property_price)
+
+        # Rent: annual cost
+        rent_monthly = rent_value * (1 + rent_esc) ** (year - 1)
+        cum_rent += rent_monthly * 12
+
+        if breakeven_year is None and net_buy < cum_rent:
+            breakeven_year = year
+            break
+
+    verdict = "BUY" if breakeven_year is not None and breakeven_year <= 20 else "RENT"
+    monthly_delta = round(emi - rent_value)
+
+    # Voice summaries
+    price_fmt = format_inr(property_price)
+    emi_fmt = format_inr(emi)
+    delta_fmt = format_inr(abs(monthly_delta))
+
+    if verdict == "BUY":
+        voice_hi = (
+            f"{city} mein ₹{price_fmt} ke ghar ke liye: EMI hogi ~₹{emi_fmt} — "
+            f"abhi ke kiraye se ₹{delta_fmt} zyada. "
+            f"Lekin year {breakeven_year} ke baad buying financially better ho jaata hai."
+        )
+        voice_en = (
+            f"For a ₹{price_fmt} home in {city}: EMI will be ~₹{emi_fmt} — "
+            f"₹{delta_fmt} more than your current rent. "
+            f"But from year {breakeven_year}, buying becomes financially better."
+        )
+    else:
+        voice_hi = (
+            f"{city} mein ₹{price_fmt} ke ghar ke liye: EMI hogi ~₹{emi_fmt} — "
+            f"abhi ke kiraye se ₹{delta_fmt} zyada. "
+            f"20 saal ke horizon mein renting financially better lag raha hai."
+        )
+        voice_en = (
+            f"For a ₹{price_fmt} home in {city}: EMI will be ~₹{emi_fmt} — "
+            f"₹{delta_fmt} more than your current rent. "
+            f"Within a 20-year horizon, renting looks financially better."
+        )
+
+    return {
+        "verdict": verdict,
+        "breakeven_year": breakeven_year,
+        "emi": round(emi),
+        "monthly_delta": monthly_delta,
+        "rent_used": rent_value,
+        "rent_source": rent_source,
+        "down_payment_amount": round(down_payment),
+        "city": city,
+        "appreciation_pct": appr_pct,
+        "voice_summary_hi": voice_hi,
+        "voice_summary_en": voice_en,
     }

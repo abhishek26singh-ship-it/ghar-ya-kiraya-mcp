@@ -1,11 +1,10 @@
-"""Main MCP tool: calculate_rent_vs_buy."""
+"""Tool 4: get_interactive_card — full card with sliders, charts, hidden costs. ~32KB."""
 
 import json
 import os
 from typing import Annotated
 
 from mcp.types import TextContent, EmbeddedResource, TextResourceContents
-
 from core.calculator import compute_rent_vs_buy, format_inr
 
 _CARD_PATH = os.path.join(os.path.dirname(__file__), "..", "ui", "card.html")
@@ -37,14 +36,14 @@ def _build_voice_summary(result: dict) -> str:
             f"abhi ke kiraye se ₹{delta} zyada. "
             f"Lekin year {be} ke baad buying financially better ho jaata hai. "
             f"{horizon} saal mein buying se ~₹{net} ka net fayda. "
-            f"Neeche dekho poora picture."
+            f"Neeche sliders se numbers adjust kar sakte ho."
         )
     else:
         return (
             f"{city} mein ₹{price} ke ghar ke liye: EMI hogi ~₹{emi} — "
             f"abhi ke kiraye se ₹{delta} zyada. "
             f"{horizon} saal ke horizon mein renting financially better lag raha hai — "
-            f"~₹{net} ka fark. Neeche dekho full analysis."
+            f"~₹{net} ka fark. Sliders se explore karo."
         )
 
 
@@ -57,28 +56,27 @@ def _build_html_card(result: dict) -> str:
 
 def register(mcp):
     @mcp.tool(
-        name="calculate_rent_vs_buy",
+        name="get_interactive_card",
         description=(
-            "Compare renting vs buying a home in India. "
-            "Returns verdict, break-even year, yearly cost series, hidden costs, "
-            "and an interactive MCP-UI card with charts and sliders. "
-            "All computation is server-side."
+            "Full interactive card with sliders, hidden costs, charts, city appreciation, "
+            "and follow-up buttons. Call ONLY when user wants to tune numbers, explore what-ifs, "
+            "or explicitly asks for sliders. Do NOT call on first response."
         ),
     )
-    def calculate_rent_vs_buy(
-        property_price: Annotated[int, "Property price in INR (e.g. 5200000 for 52 lakh)"],
+    def get_interactive_card(
+        property_price: Annotated[int, "Property price in INR"],
         monthly_rent: Annotated[int, "Current monthly rent in INR"],
-        city: Annotated[str, "City name (e.g. Mumbai, Pune, Bangalore)"] = "",
-        down_payment_pct: Annotated[float, "Down payment as percentage of property price"] = 20.0,
+        city: Annotated[str, "City name"] = "",
+        down_payment_pct: Annotated[float, "Down payment percentage"] = 20.0,
         loan_tenure_years: Annotated[int, "Loan tenure in years"] = 20,
-        interest_rate_pct: Annotated[float, "Annual home loan interest rate percentage"] = 8.5,
-        planning_horizon_years: Annotated[int, "How many years to compare over"] = 20,
-        rent_escalation_pct: Annotated[float, "Annual rent increase percentage"] = 8.0,
-        appreciation_rate_pct: Annotated[float, "Annual property appreciation %. Set 0 to auto-detect from city data"] = 0.0,
-        down_payment_inv_return_pct: Annotated[float, "Expected annual return if down payment was invested instead"] = 8.0,
+        interest_rate_pct: Annotated[float, "Annual interest rate %"] = 8.5,
+        planning_horizon_years: Annotated[int, "Planning horizon years"] = 20,
+        rent_escalation_pct: Annotated[float, "Annual rent increase %"] = 8.0,
+        appreciation_rate_pct: Annotated[float, "Property appreciation %. 0 = auto from city"] = 0.0,
+        down_payment_inv_return_pct: Annotated[float, "Return if down payment invested %"] = 8.0,
         stamp_duty_pct: Annotated[float, "Stamp duty percentage"] = 6.0,
         registration_fee: Annotated[int, "Registration fee in INR"] = 30000,
-        monthly_maintenance: Annotated[int, "Monthly maintenance cost in INR"] = 3000,
+        monthly_maintenance: Annotated[int, "Monthly maintenance in INR"] = 3000,
         property_tax_per_year: Annotated[int, "Annual property tax in INR"] = 8000,
     ) -> list:
         result = compute_rent_vs_buy(
@@ -101,18 +99,12 @@ def register(mcp):
         voice_summary = _build_voice_summary(result)
         html_card = _build_html_card(result)
 
-        # Return proper MCP content blocks:
-        # 1. Text block — voice/chat summary (what the LLM reads aloud)
-        # 2. EmbeddedResource with text/html — the MCP-UI card (rendered in webview)
         return [
-            TextContent(
-                type="text",
-                text=voice_summary,
-            ),
+            TextContent(type="text", text=voice_summary),
             EmbeddedResource(
                 type="resource",
                 resource=TextResourceContents(
-                    uri="ui://ghar-ya-kiraya/card",
+                    uri="ui://ghar-ya-kiraya/interactive",
                     mimeType="text/html",
                     text=html_card,
                 ),

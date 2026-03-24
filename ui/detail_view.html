@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+@font-face { font-family: 'JioType'; font-weight: 400; src: url('https://raw.githubusercontent.com/sunit1986/JioBharatIQ_Server/main/assets/fonts/woff2/JioTypeVarW05-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'JioType'; font-weight: 500; src: url('https://raw.githubusercontent.com/sunit1986/JioBharatIQ_Server/main/assets/fonts/woff2/JioTypeW05-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'JioType'; font-weight: 700; src: url('https://raw.githubusercontent.com/sunit1986/JioBharatIQ_Server/main/assets/fonts/woff2/JioTypeW05-Bold.woff2') format('woff2'); }
+
+:root {
+  --primary-50: #3535f3; --success-50: #0b8043; --success-10: #e6f4ea;
+  --error-50: #fa2f40; --warning-50: #f9a825;
+  --grey-90: #141414; --grey-70: #555; --grey-50: #888; --grey-30: #c4c4c4; --grey-10: #f0f0f0;
+  --bg: #ffffff; --surface: #f5f5f5; --text: #141414; --text-secondary: #555;
+}
+.dark {
+  --bg: #141414; --surface: #1e1e1e; --text: #f0f0f0; --text-secondary: #aaa;
+  --grey-10: #2a2a2a; --grey-30: #555;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'JioType', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 16px; max-width: 480px; margin: 0 auto; }
+
+.section-title { font-size: 11px; font-weight: 700; color: var(--grey-50); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+
+/* Table styles */
+.yr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.yr-table th { color: var(--grey-50); font-weight: 500; text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grey-10); font-size: 11px; }
+.yr-table th:first-child { text-align: left; }
+.yr-table td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--grey-10); }
+.yr-table td:first-child { text-align: left; color: var(--grey-50); }
+.yr-table tr:last-child td { border-bottom: none; }
+.yr-table .hl td { background: var(--success-10); color: var(--success-50); font-weight: 500; }
+.yr-table .hl td:first-child { color: var(--success-50); }
+
+/* Snapshot grid */
+.snap-grid { display: grid; gap: 1px; background: var(--grey-10); border-radius: 10px; overflow: hidden; }
+.snap-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg); }
+.snap-label { font-size: 13px; color: var(--text-secondary); }
+.snap-value { font-size: 14px; font-weight: 500; }
+.amber { color: var(--warning-50); }
+.green { color: var(--success-50); }
+
+/* Hidden costs */
+.costs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cost-col-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.cost-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--grey-10); font-size: 12px; }
+.cost-row:last-child { border-bottom: none; }
+.cost-label { color: var(--text-secondary); flex: 1; }
+.cost-value { font-weight: 500; text-align: right; }
+
+.source { font-size: 10px; color: var(--grey-50); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const DATA = /*__DATA_PLACEHOLDER__*/{};
+
+function postMsg(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else if (window.parent && window.parent !== window) {
+      window.parent.postMessage(JSON.stringify(msg), '*');
+    }
+  } catch(e) {}
+}
+function reportHeight() {
+  requestAnimationFrame(() => {
+    postMsg({ type: 'ui-size-change', height: document.body.scrollHeight + 24, scrollable: false });
+  });
+}
+window.addEventListener('message', (e) => {
+  try {
+    const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (msg.type === 'ui-lifecycle-iframe-render-data') {
+      if (msg.theme === 'dark') document.body.classList.add('dark');
+    }
+  } catch(ex) {}
+});
+
+function fmtL(n) {
+  if (n == null) return '—';
+  const abs = Math.abs(n), sign = n < 0 ? '-' : '';
+  if (abs >= 10000000) return sign + '₹' + (abs/10000000).toFixed(1) + 'Cr';
+  if (abs >= 100000) return sign + '₹' + (abs/100000).toFixed(1) + 'L';
+  if (abs >= 1000) return sign + '₹' + (abs/1000).toFixed(0) + 'K';
+  return sign + '₹' + abs.toFixed(0);
+}
+function fmtComma(n) {
+  if (n == null) return '—';
+  const s = String(Math.round(Math.abs(n)));
+  if (s.length <= 3) return (n<0?'-':'') + '₹' + s;
+  const last3 = s.slice(-3);
+  let rest = s.slice(0,-3);
+  const parts = [];
+  while (rest.length > 0) { parts.unshift(rest.slice(-2)); rest = rest.slice(0,-2); }
+  return (n<0?'-':'') + '₹' + parts.join(',') + ',' + last3;
+}
+
+function renderYearlyTable() {
+  const series = DATA.yearly_series || [];
+  const horizon = (DATA.inputs_used && DATA.inputs_used.planning_horizon_years) || 20;
+  const showYears = [1,2,3,5,7,10,15,20].filter(y => y <= horizon);
+  let be = DATA.breakeven_year;
+  let html = '<div class="section-title">Year-by-year breakdown</div>';
+  html += '<table class="yr-table"><thead><tr><th>Year</th><th>Rent/mo</th><th>Cum. Rent</th><th>Cum. Buy</th><th>Better</th></tr></thead><tbody>';
+  showYears.forEach(y => {
+    const row = series[y-1];
+    if (!row) return;
+    const isBetter = row.better === 'BUY';
+    const isHl = be && y >= be && isBetter;
+    html += `<tr class="${isHl ? 'hl' : ''}">`;
+    html += `<td>${y === be ? '⭐ ' : ''}Year ${y}</td>`;
+    html += `<td>${fmtComma(row.monthly_rent_that_year)}</td>`;
+    html += `<td>${fmtL(row.cumulative_rent_cost)}</td>`;
+    html += `<td>${fmtL(row.cumulative_buy_cost)}</td>`;
+    html += `<td>${row.better}</td>`;
+    html += `</tr>`;
+  });
+  html += '</tbody></table>';
+  html += '<div class="source">Buy cost = EMI + maintenance + tax − appreciation. Stamp duty in year 0.</div>';
+  return html;
+}
+
+function renderMonthlySnapshot() {
+  const snap = DATA.monthly_snapshot || {};
+  const inp = DATA.inputs_used || {};
+  let html = '<div class="section-title">Monthly snapshot</div>';
+  html += '<div class="snap-grid">';
+  html += `<div class="snap-row"><span class="snap-label">Current monthly rent</span><span class="snap-value">${fmtComma(snap.current_rent)}</span></div>`;
+  html += `<div class="snap-row"><span class="snap-label">Monthly EMI</span><span class="snap-value">${fmtComma(snap.emi)}</span></div>`;
+  html += `<div class="snap-row"><span class="snap-label">EMI − Rent (extra/mo)</span><span class="snap-value amber">${fmtComma(snap.monthly_delta)}</span></div>`;
+  html += `<div class="snap-row"><span class="snap-label">Stamp duty + registration</span><span class="snap-value amber">${fmtL(snap.stamp_duty + snap.registration)}</span></div>`;
+  html += `<div class="snap-row"><span class="snap-label">Maintenance / month</span><span class="snap-value">${fmtComma(snap.maintenance)}</span></div>`;
+  if (snap.rent_year_5) html += `<div class="snap-row"><span class="snap-label">Your rent in year 5</span><span class="snap-value amber">${fmtComma(snap.rent_year_5)}</span></div>`;
+  if (snap.rent_year_10) html += `<div class="snap-row"><span class="snap-label">Your rent in year 10</span><span class="snap-value amber">${fmtComma(snap.rent_year_10)}</span></div>`;
+  html += '</div>';
+  return html;
+}
+
+function renderHiddenCosts() {
+  const costs = DATA.hidden_costs || {};
+  let html = '<div class="section-title">Hidden costs — both sides</div>';
+  html += '<div class="costs-grid">';
+
+  // Buying
+  html += '<div><div class="cost-col-title">🏠 Buying</div>';
+  (costs.buying || []).forEach(c => {
+    html += `<div class="cost-row"><span class="cost-label">${c.label}</span><span class="cost-value">${c.value}</span></div>`;
+  });
+  html += '</div>';
+
+  // Renting
+  html += '<div><div class="cost-col-title">🔑 Renting</div>';
+  (costs.renting || []).forEach(c => {
+    html += `<div class="cost-row"><span class="cost-label">${c.label}</span><span class="cost-value">${c.value}</span></div>`;
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function render() {
+  const view = DATA.view_type || 'yearly_table';
+  let html = '';
+  if (view === 'yearly_table') html = renderYearlyTable();
+  else if (view === 'monthly_snapshot') html = renderMonthlySnapshot();
+  else if (view === 'hidden_costs') html = renderHiddenCosts();
+  document.getElementById('app').innerHTML = html;
+  reportHeight();
+  setTimeout(reportHeight, 300);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  postMsg({ type: 'ui-lifecycle-iframe-ready' });
+});
+if (DATA && DATA.view_type) render();
+else document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>
