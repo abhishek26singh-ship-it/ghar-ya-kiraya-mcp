@@ -1,31 +1,21 @@
-"""Tool 3: get_detail_view — on-demand data views (table, snapshot, hidden costs). ~1-2KB."""
+"""Tool 3: get_detail_view — returns URL-based MCP-UI for detail views."""
 
-import json
 import os
 from typing import Annotated
+from urllib.parse import urlencode
 
 from mcp.types import TextContent, EmbeddedResource, TextResourceContents
-from core.calculator import compute_rent_vs_buy
 
-_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "..", "ui", "detail_view.html")
-_TEMPLATE = None
-
-
-def _load_template() -> str:
-    global _TEMPLATE
-    if _TEMPLATE is None:
-        with open(_TEMPLATE_PATH, "r") as f:
-            _TEMPLATE = f.read()
-    return _TEMPLATE
+_BASE_URL = os.environ.get("MCP_BASE_URL", "https://ghar-ya-kiraya-mcp.onrender.com")
 
 
 def register(mcp):
     @mcp.tool(
         name="get_detail_view",
         description=(
-            "Returns a lightweight detail view — year-by-year table, monthly snapshot, or hidden costs. "
-            "Call when user asks for 'year by year breakdown', 'monthly snapshot', or 'hidden costs'. "
-            "No charts, no sliders. Pure HTML tables — very fast."
+            "Returns a detail view (year-by-year table, monthly snapshot, or hidden costs). "
+            "Call when user asks for breakdowns or details. "
+            "Pass view='yearly_table', 'monthly_snapshot', or 'hidden_costs'."
         ),
     )
     def get_detail_view(
@@ -41,42 +31,30 @@ def register(mcp):
         appreciation_rate_pct: Annotated[float, "Property appreciation %. 0 = auto"] = 0.0,
         down_payment_inv_return_pct: Annotated[float, "Return if down payment invested %"] = 8.0,
     ) -> list:
-        result = compute_rent_vs_buy(
-            city=city,
-            property_price=property_price,
-            monthly_rent=monthly_rent,
-            down_payment_pct=down_payment_pct,
-            loan_tenure_years=loan_tenure_years,
-            interest_rate_pct=interest_rate_pct,
-            planning_horizon_years=planning_horizon_years,
-            rent_escalation_pct=rent_escalation_pct,
-            down_payment_inv_return_pct=down_payment_inv_return_pct,
-            appreciation_rate_pct=appreciation_rate_pct,
-        )
-
-        # Build data payload based on view type
         view_type = view if view in ("yearly_table", "monthly_snapshot", "hidden_costs") else "yearly_table"
 
-        card_data = {
-            "view_type": view_type,
-            "verdict": result["verdict"],
-            "breakeven_year": result["breakeven_year"],
-            "inputs_used": result["inputs_used"],
+        # Build URL for the detail card
+        params = urlencode({
+            "view": view_type,
+            "city": city,
+            "property_price": property_price,
+            "monthly_rent": monthly_rent,
+            "down_payment_pct": down_payment_pct,
+            "loan_tenure_years": loan_tenure_years,
+            "interest_rate_pct": interest_rate_pct,
+            "planning_horizon_years": planning_horizon_years,
+            "rent_escalation_pct": rent_escalation_pct,
+            "appreciation_rate_pct": appreciation_rate_pct,
+            "down_payment_inv_return_pct": down_payment_inv_return_pct,
+        })
+        card_url = f"{_BASE_URL}/demo/detail?{params}"
+
+        view_labels = {
+            "yearly_table": "Year-by-year breakdown",
+            "monthly_snapshot": "Monthly snapshot",
+            "hidden_costs": "Hidden costs comparison",
         }
-
-        if view_type == "yearly_table":
-            card_data["yearly_series"] = result["yearly_series"]
-            brief = f"Year-by-year breakdown for {city or 'property'}: break-even at year {result['breakeven_year'] or 'N/A'}"
-        elif view_type == "monthly_snapshot":
-            card_data["monthly_snapshot"] = result["monthly_snapshot"]
-            brief = f"Monthly snapshot: EMI ₹{result['emi']:,} vs rent ₹{monthly_rent:,}"
-        else:
-            card_data["hidden_costs"] = result["hidden_costs"]
-            brief = "Hidden costs comparison: buying vs renting"
-
-        # Inject into template
-        template = _load_template()
-        html = template.replace("/*__DATA_PLACEHOLDER__*/{}", json.dumps(card_data, ensure_ascii=False))
+        brief = f"{view_labels.get(view_type, view_type)} rendered for {city or 'property'}."
 
         return [
             TextContent(type="text", text=brief),
@@ -84,8 +62,8 @@ def register(mcp):
                 type="resource",
                 resource=TextResourceContents(
                     uri=f"ui://ghar-ya-kiraya/detail/{view_type}",
-                    mimeType="text/html",
-                    text=html,
+                    mimeType="text/uri-list",
+                    text=card_url,
                 ),
             ),
         ]

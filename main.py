@@ -46,6 +46,8 @@ register_avg_rent(mcp)
 
 # ASGI app — MCP endpoint + demo page + health
 from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Route, Mount
 
@@ -85,7 +87,7 @@ async def demo_card(request):
 
 
 async def demo_summary(request):
-    """Preview the summary card (Tool 2) in browser."""
+    """Preview the summary card (Tool 2) in browser. JBIQ WebView fetches this URL."""
     import json
     from core.calculator import compute_rent_vs_buy
 
@@ -95,7 +97,12 @@ async def demo_summary(request):
         property_price=int(params.get("property_price", 5200000)),
         monthly_rent=int(params.get("monthly_rent", 18000)),
         down_payment_pct=float(params.get("down_payment_pct", 20)),
+        loan_tenure_years=int(params.get("loan_tenure_years", 20)),
+        interest_rate_pct=float(params.get("interest_rate_pct", 8.5)),
         planning_horizon_years=int(params.get("planning_horizon_years", 20)),
+        rent_escalation_pct=float(params.get("rent_escalation_pct", 8)),
+        appreciation_rate_pct=float(params.get("appreciation_rate_pct", 0)),
+        down_payment_inv_return_pct=float(params.get("down_payment_inv_return_pct", 8)),
     )
     card_data = {k: result[k] for k in ["verdict", "verdict_text", "breakeven_year", "emi", "monthly_delta", "yearly_series", "horizon_summary", "inputs_used"]}
     template_path = os.path.join(os.path.dirname(__file__), "ui", "summary_card.html")
@@ -105,7 +112,7 @@ async def demo_summary(request):
 
 
 async def demo_detail(request):
-    """Preview detail views (Tool 3) in browser. ?view=yearly_table|monthly_snapshot|hidden_costs"""
+    """Preview detail views (Tool 3) in browser. JBIQ WebView fetches this URL."""
     import json
     from core.calculator import compute_rent_vs_buy
 
@@ -116,6 +123,12 @@ async def demo_detail(request):
         property_price=int(params.get("property_price", 5200000)),
         monthly_rent=int(params.get("monthly_rent", 18000)),
         down_payment_pct=float(params.get("down_payment_pct", 20)),
+        loan_tenure_years=int(params.get("loan_tenure_years", 20)),
+        interest_rate_pct=float(params.get("interest_rate_pct", 8.5)),
+        planning_horizon_years=int(params.get("planning_horizon_years", 20)),
+        rent_escalation_pct=float(params.get("rent_escalation_pct", 8)),
+        appreciation_rate_pct=float(params.get("appreciation_rate_pct", 0)),
+        down_payment_inv_return_pct=float(params.get("down_payment_inv_return_pct", 8)),
     )
     card_data = {"view_type": view, "verdict": result["verdict"], "breakeven_year": result["breakeven_year"], "inputs_used": result["inputs_used"]}
     if view == "yearly_table":
@@ -145,6 +158,9 @@ starlette_app = Starlette(
         Mount("/", app=_mcp_app),
     ],
     lifespan=_mcp_app.lifespan,
+    middleware=[
+        Middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]),
+    ],
 )
 app = starlette_app
 

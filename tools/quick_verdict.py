@@ -8,10 +8,9 @@ def register(mcp):
     @mcp.tool(
         name="get_quick_verdict",
         description=(
-            "Fast rent-vs-buy verdict for an Indian city. Returns verdict, break-even year, "
-            "EMI, monthly delta, and voice summaries in Hindi and English. "
-            "Call this FIRST — the LLM should speak the voice_summary immediately. "
-            "If monthly_rent is 0, auto-fetches city average rent."
+            "MUST be called FIRST for any rent-vs-buy query. Returns verdict, break-even year, "
+            "EMI, and voice summaries (Hindi + English). Speak the voice_summary immediately — "
+            "do NOT wait for other tools. Fast: under 50ms."
         ),
     )
     def get_quick_verdict(

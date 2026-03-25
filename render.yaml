@@ -7,3 +7,5 @@ services:
     envVars:
       - key: PORT
         value: "8000"
+      - key: MCP_BASE_URL
+        value: "https://ghar-ya-kiraya-mcp.onrender.com"
