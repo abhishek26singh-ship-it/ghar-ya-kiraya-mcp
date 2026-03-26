@@ -44,6 +44,33 @@ def format_inr_comma(amount: int) -> str:
     return ",".join(parts) + "," + last3
 
 
+def build_voice_summary(result: dict) -> str:
+    """Build a concise voice-friendly summary from compute_rent_vs_buy() output."""
+    inputs = result["inputs_used"]
+    city = inputs.get("city", "")
+    price_fmt = format_inr(inputs["property_price"])
+    emi_fmt = format_inr(result["emi"])
+    delta = result["monthly_delta"]
+    delta_fmt = format_inr(abs(delta))
+    verdict = result["verdict"]
+    breakeven = result["breakeven_year"]
+    horizon = inputs["planning_horizon_years"]
+
+    city_label = city if city else "Yahan"
+
+    if verdict == "BUY":
+        return (
+            f"{city_label} mein ₹{price_fmt} ke ghar ke liye EMI hogi ~₹{emi_fmt}, "
+            f"jo abhi ke kiraye se ₹{delta_fmt} zyada hai. "
+            f"Lekin year {breakeven} ke baad buying financially better ho jaata hai."
+        )
+    return (
+        f"{city_label} mein ₹{price_fmt} ke ghar ke liye EMI hogi ~₹{emi_fmt}, "
+        f"jo abhi ke kiraye se ₹{delta_fmt} zyada hai. "
+        f"{horizon} saal ke horizon mein renting financially better lag raha hai."
+    )
+
+
 def compute_emi(principal: float, annual_rate_pct: float, tenure_years: int) -> float:
     """Compute monthly EMI using standard formula."""
     if principal <= 0 or tenure_years <= 0:

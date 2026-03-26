@@ -1,4 +1,4 @@
-"""Ghar Ya Kiraya — Rent vs Buy MCP Server (Progressive 4-tool architecture)."""
+"""Ghar Ya Kiraya — Rent vs Buy MCP Server (Self-contained tool architecture)."""
 
 import os
 import sys
@@ -14,13 +14,12 @@ mcp = FastMCP(
         "You are a friendly financial guide helping Indian users decide between renting and buying a home. "
         "Match the user's language — Hindi, English, or Hinglish. Be brief.\n\n"
         "TOOL CALLING ORDER — follow exactly:\n"
-        "1. Call get_quick_verdict first → speak the voice_summary immediately (3 sentences max)\n"
-        "2. Call get_verdict_card in same turn → renders chart card with 4 buttons\n"
-        "3. End with one sentence surfacing the defaults used (rent, down payment, city appreciation)\n\n"
+        "1. Call get_verdict_card → speak the text summary immediately (3 sentences max), card renders automatically\n"
+        "2. End with one sentence surfacing the defaults used (rent, down payment, city appreciation)\n\n"
         "When user taps buttons or asks follow-ups:\n"
         "- 'Year-by-year' / 'monthly snapshot' / 'hidden costs' → call get_detail_view with view param\n"
         "- 'Tune numbers' / 'what if' / slider requests → call get_interactive_card\n"
-        "- Different city/price → re-call get_quick_verdict + get_verdict_card\n\n"
+        "- Different city/price → re-call get_verdict_card with new params\n\n"
         "Use get_city_appreciation for NHB RESIDEX data.\n"
         "Use get_avg_rent_for_city when user doesn't know their rent.\n"
         "Never call get_interactive_card on first response.\n"
@@ -29,15 +28,13 @@ mcp = FastMCP(
     ),
 )
 
-# Register all 6 tools
-from tools.quick_verdict import register as register_quick_verdict
+# Register all 5 tools
 from tools.summary_card import register as register_summary_card
 from tools.detail_view import register as register_detail_view
 from tools.interactive_card import register as register_interactive_card
 from tools.city_appreciation import register as register_city_appreciation
 from tools.avg_rent import register as register_avg_rent
 
-register_quick_verdict(mcp)
 register_summary_card(mcp)
 register_detail_view(mcp)
 register_interactive_card(mcp)
@@ -60,13 +57,13 @@ async def homepage(request):
 
 
 async def health(request):
-    return JSONResponse({"status": "ok", "server": "ghar-ya-kiraya", "tools": 6})
+    return JSONResponse({"status": "ok", "server": "ghar-ya-kiraya", "tools": 5})
 
 
 async def demo_card(request):
     """Render the full interactive card — used by demo page."""
-    from core.calculator import compute_rent_vs_buy
-    from tools.interactive_card import _build_html_card, _build_voice_summary
+    import json
+    from core.calculator import compute_rent_vs_buy, build_voice_summary
 
     params = dict(request.query_params)
     result = compute_rent_vs_buy(
@@ -81,13 +78,15 @@ async def demo_card(request):
         appreciation_rate_pct=float(params.get("appreciation_rate_pct", 0)),
         down_payment_inv_return_pct=float(params.get("down_payment_inv_return_pct", 8)),
     )
-    result["_voice_summary"] = _build_voice_summary(result)
-    html = _build_html_card(result)
+    result["_voice_summary"] = build_voice_summary(result)
+    template_path = os.path.join(os.path.dirname(__file__), "ui", "card.html")
+    with open(template_path, "r") as f:
+        html = f.read().replace("/*__DATA_PLACEHOLDER__*/{}", json.dumps(result, ensure_ascii=False))
     return HTMLResponse(html)
 
 
 async def demo_summary(request):
-    """Preview the summary card (Tool 2) in browser. JBIQ WebView fetches this URL."""
+    """Preview the summary card in browser. JBIQ WebView fetches this URL."""
     import json
     from core.calculator import compute_rent_vs_buy
 
@@ -112,7 +111,7 @@ async def demo_summary(request):
 
 
 async def demo_detail(request):
-    """Preview detail views (Tool 3) in browser. JBIQ WebView fetches this URL."""
+    """Preview detail views in browser. JBIQ WebView fetches this URL."""
     import json
     from core.calculator import compute_rent_vs_buy
 
