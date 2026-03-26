@@ -51,15 +51,15 @@ def register(mcp):
 
         resource = TextResourceContents(
             uri="ui://ghar-ya-kiraya/interactive-0",
-            mimeType="text/html;profile=mcp-app",
+            mimeType="text/uri-list",
             text=card_url,
+            meta={
+                "description": "Full interactive card with sliders for what-if rent vs buy scenario exploration.",
+                "name": "Interactive Calculator",
+            },
         )
-        resource.meta = {
-            "description": "Full interactive card with sliders for what-if rent vs buy scenario exploration.",
-            "name": "Interactive Calculator",
-        }
 
         return [
-            TextContent(type="text", text=f"Interactive card rendered for {city or 'property'}. Use sliders to explore scenarios."),
             EmbeddedResource(type="resource", resource=resource),
+            TextContent(type="text", text=f"Interactive card rendered for {city or 'property'}. Use sliders to explore scenarios."),
         ]

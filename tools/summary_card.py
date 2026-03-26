@@ -75,15 +75,15 @@ def register(mcp):
 
         resource = TextResourceContents(
             uri="ui://ghar-ya-kiraya/summary-0",
-            mimeType="text/html;profile=mcp-app",
+            mimeType="text/uri-list",
             text=card_url,
+            meta={
+                "description": "Visual summary card showing rent vs buy verdict with chart and action buttons.",
+                "name": "Verdict Card",
+            },
         )
-        resource.meta = {
-            "description": "Visual summary card showing rent vs buy verdict with chart and action buttons.",
-            "name": "Verdict Card",
-        }
 
         return [
-            TextContent(type="text", text=voice_summary),
             EmbeddedResource(type="resource", resource=resource),
+            TextContent(type="text", text=voice_summary),
         ]

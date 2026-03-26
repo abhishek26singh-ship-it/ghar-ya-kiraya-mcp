@@ -58,15 +58,15 @@ def register(mcp):
 
         resource = TextResourceContents(
             uri=f"ui://ghar-ya-kiraya/detail/{view_type}-0",
-            mimeType="text/html;profile=mcp-app",
+            mimeType="text/uri-list",
             text=card_url,
+            meta={
+                "description": f"{view_labels.get(view_type, view_type)} showing detailed rent vs buy cost analysis.",
+                "name": view_labels.get(view_type, "Detail View"),
+            },
         )
-        resource.meta = {
-            "description": f"{view_labels.get(view_type, view_type)} showing detailed rent vs buy cost analysis.",
-            "name": view_labels.get(view_type, "Detail View"),
-        }
 
         return [
-            TextContent(type="text", text=brief),
             EmbeddedResource(type="resource", resource=resource),
+            TextContent(type="text", text=brief),
         ]

@@ -25,19 +25,20 @@ There is no linter, formatter, or test suite configured beyond `test_local.py`.
 
 ### Tool Return Contract
 
-Every UI tool MUST return both content blocks in a single response:
-1. **`TextContent`** — concise voice-friendly summary (2-3 sentences with key numbers). This is what the LLM speaks/narrates. NOT raw JSON.
-2. **`EmbeddedResource`** — card URL for visual rendering in JBIQ WebView.
+Every UI tool MUST return both content blocks in a single response, in this order:
+1. **`EmbeddedResource`** — card URL for visual rendering in JBIQ WebView. **MUST be first.**
+2. **`TextContent`** — concise voice-friendly summary (2-3 sentences with key numbers). This is what the LLM speaks/narrates. NOT raw JSON.
 
 Data-lookup tools (no UI) return text-only (dict or TextContent).
 
 ### MCP-UI Format (JBIQ Standard)
 
-Follow the `@mcp-ui/server` `createUIResource()` wire format exactly:
-- **MIME type**: `text/html;profile=mcp-app` (NOT `text/uri-list` or `text/html`)
-- **`_meta`**: Must include `description` and `name` on the resource object
+Match the exact wire format used by aicore-jiomart-mcp-service (verified working on JBIQ via Langfuse):
+- **MIME type**: `text/uri-list` (this is what JBIQ expects for external URL resources)
+- **`meta`**: Must include `description` and `name` — pass via `meta=` constructor kwarg (NOT `.meta =` assignment)
 - **URI scheme**: `ui://ghar-ya-kiraya/{component}-{index}` (e.g. `ui://ghar-ya-kiraya/summary-0`)
-- **Pydantic gotcha**: Set `_meta` via `resource.meta = {...}` AFTER construction, NOT via `meta=` constructor kwarg (due to Pydantic alias + extra='allow' conflict)
+- **Content order**: EmbeddedResource FIRST, TextContent SECOND (matches JioMart)
+- **Pydantic note**: `meta=` in constructor stores as Pydantic extra field → serializes as `meta` on wire (matching JioMart). Do NOT use `.meta =` assignment which serializes as `_meta`.
 
 ### Performance
 
