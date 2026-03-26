@@ -1,5 +1,6 @@
 """Tool 3: get_detail_view — returns URL-based MCP-UI for detail views."""
 
+import json
 import os
 from typing import Annotated
 from urllib.parse import urlencode
@@ -56,10 +57,20 @@ def register(mcp):
         }
         brief = f"{view_labels.get(view_type, view_type)} rendered for {city or 'property'}."
 
+        uri = f"ui://ghar-ya-kiraya/detail/{view_type}-0"
+        widget_json = json.dumps({
+            "type": "resource",
+            "resource": {
+                "uri": uri,
+                "mimeType": "text/uri-list",
+                "text": card_url,
+            },
+        })
+
         resource = TextResourceContents(
-            uri=f"ui://ghar-ya-kiraya/detail/{view_type}-0",
+            uri=uri,
             mimeType="text/uri-list",
-            text=card_url,
+            text=widget_json,
             meta={
                 "description": f"{view_labels.get(view_type, view_type)} showing detailed rent vs buy cost analysis.",
                 "name": view_labels.get(view_type, "Detail View"),

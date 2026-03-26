@@ -1,5 +1,6 @@
 """Tool 4: get_interactive_card — returns URL-based MCP-UI for full card with sliders."""
 
+import json
 import os
 from typing import Annotated
 from urllib.parse import urlencode
@@ -49,10 +50,20 @@ def register(mcp):
         })
         card_url = f"{_BASE_URL}/demo/card?{params}"
 
+        uri = "ui://ghar-ya-kiraya/interactive-0"
+        widget_json = json.dumps({
+            "type": "resource",
+            "resource": {
+                "uri": uri,
+                "mimeType": "text/uri-list",
+                "text": card_url,
+            },
+        })
+
         resource = TextResourceContents(
-            uri="ui://ghar-ya-kiraya/interactive-0",
+            uri=uri,
             mimeType="text/uri-list",
-            text=card_url,
+            text=widget_json,
             meta={
                 "description": "Full interactive card with sliders for what-if rent vs buy scenario exploration.",
                 "name": "Interactive Calculator",

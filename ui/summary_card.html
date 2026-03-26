@@ -75,14 +75,19 @@ function postMsg(msg) {
 }
 function reportHeight() {
   requestAnimationFrame(() => {
-    postMsg({ type: 'ui-size-change', height: document.body.scrollHeight + 24, scrollable: false });
+    postMsg({ type: 'ui-size-change', payload: { height: document.body.scrollHeight + 24, scrollable: false } });
   });
 }
 window.addEventListener('message', (e) => {
   try {
     const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
     if (msg.type === 'ui-lifecycle-iframe-render-data') {
-      if (msg.theme === 'dark') document.body.classList.add('dark');
+      var theme = (msg.payload && msg.payload.renderData && msg.payload.renderData.theme)
+               || (msg.renderData && msg.renderData.theme)
+               || msg.theme
+               || (msg.payload && msg.payload.theme)
+               || null;
+      if (theme === 'dark') document.body.classList.add('dark');
       else document.body.classList.remove('dark');
     }
   } catch(ex) {}

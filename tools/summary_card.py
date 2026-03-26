@@ -1,5 +1,6 @@
 """Tool: get_verdict_card — primary rent vs buy tool returning text + UI card."""
 
+import json
 import os
 from typing import Annotated
 from urllib.parse import urlencode
@@ -73,10 +74,20 @@ def register(mcp):
         })
         card_url = f"{_BASE_URL}/demo/summary?{params}"
 
+        uri = "ui://ghar-ya-kiraya/summary-0"
+        widget_json = json.dumps({
+            "type": "resource",
+            "resource": {
+                "uri": uri,
+                "mimeType": "text/uri-list",
+                "text": card_url,
+            },
+        })
+
         resource = TextResourceContents(
-            uri="ui://ghar-ya-kiraya/summary-0",
+            uri=uri,
             mimeType="text/uri-list",
-            text=card_url,
+            text=widget_json,
             meta={
                 "description": "Visual summary card showing rent vs buy verdict with chart and action buttons.",
                 "name": "Verdict Card",
